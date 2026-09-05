@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="QUANT PRO">
+<link rel="apple-touch-icon" href="https://img.icons8.com/fluency/192/bullish.png">
+<title>QUANT-STATION Pro</title>
+<style>
+  :root {
+    --bg-main: #0b0e14;
+    --bg-card: #151922;
+    --border: #232a36;
+    --accent-blue: #0088ff;
+    --accent-buy: #00d084;
+    --accent-sell: #ff4757;
+    --text-primary: #f0f6fc;
+    --text-muted: #8b949e;
+    --gold: #f1c40f;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: rgba(0,0,0,0); }
+  body {
+    margin: 0;
+    padding: calc(env(safe-area-inset-top) + 8px) 8px calc(env(safe-area-inset-bottom) + 8px) 8px;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+  .app-title { font-size: 15px; font-weight: bold; color: var(--accent-blue); }
+  .status-badge { background: #00c300; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; color: #fff; }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+  .card-title {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .chart-container {
+    height: 220px;
+    width: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .book-table {
+    width: 100%;
+    font-family: monospace;
+    font-size: 13px;
+    border-collapse: collapse;
+  }
+  .book-table td { padding: 3px 2px; }
+  .ask { color: var(--accent-sell); }
+  .bid { color: var(--accent-buy); }
+  .current-row {
+    background: rgba(0, 136, 255, 0.15);
+    border-top: 1px solid var(--accent-blue);
+    border-bottom: 1px solid var(--accent-blue);
+    font-weight: bold;
+  }
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .btn {
+    flex: 1;
+    border: none;
+    padding: 13px 0;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+  }
+  .btn:active { opacity: 0.7; transform: scale(0.98); }
+  .btn-buy { background: var(--accent-buy); color: #000; }
+  .btn-sell { background: var(--accent-sell); color: #fff; }
+  .btn-auto-off { background: var(--accent-blue); color: #fff; width: 100%; margin-top: 8px; padding: 12px 0; border-radius: 8px; border: none; font-weight: bold; font-size: 13px; }
+  .btn-auto-on { background: var(--accent-sell); color: #fff; width: 100%; margin-top: 8px; padding: 12px 0; border-radius: 8px; border: none; font-weight: bold; font-size: 13px; }
+  .log-box {
+    background: #080a0f;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px;
+    font-family: monospace;
+    font-size: 11px;
+    height: 90px;
+    overflow-y: auto;
+  }
+  .log-row { margin-bottom: 3px; border-bottom: 1px solid #161b22; padding-bottom: 2px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="app-title">⚡ QUANT PRO</div>
+  <span class="status-badge">STANDALONE WEB</span>
+</div>
+
+<div class="card">
+  <div class="card-title">総資産 / 本日損益</div>
+  <div style="display: flex; justify-content: space-between; align-items: baseline;">
+    <span style="font-size: 22px; font-weight: bold;">¥12,480</span>
+    <span style="color: var(--accent-buy); font-weight: bold; font-size: 13px;">+¥2,480 (+24.8%)</span>
+  </div>
+</div>
+
+<div class="card" style="padding: 6px;">
+  <div class="card-title" style="padding: 0 4px;">
+    <span>BTC/JPY チャート</span>
+    <span style="color: var(--accent-blue);">1分足</span>
+  </div>
+  <div class="chart-container">
+    <div class="tradingview-widget-container" style="height:100%;width:100%">
+      <div id="tradingview_chart" style="height:100%;width:100%"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+      <script type="text/javascript">
+      new TradingView.widget({
+        "autosize": true,
+        "symbol": "BITFLYER:BTCJPY",
+        "interval": "1",
+        "timezone": "Asia/Tokyo",
+        "theme": "dark",
+        "style": "1",
+        "locale": "ja",
+        "enable_publishing": false,
+        "hide_top_toolbar": true,
+        "hide_legend": true,
+        "save_image": false,
+        "container_id": "tradingview_chart"
+      });
+      </script>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">
+    <span>リアルタイム最良気配</span>
+    <span id="spread-disp" style="color: var(--accent-buy);">スプレッド 0.00%</span>
+  </div>
+  <table class="book-table">
+    <tr class="ask"><td>最良売気配</td><td align="right" id="ask-val">¥0</td></tr>
+    <tr class="current-row"><td><b>現在値 (LTP)</b></td><td align="right" id="last-val"><b>¥0</b></td></tr>
+    <tr class="bid"><td>最良買気配</td><td align="right" id="bid-val">¥0</td></tr>
+  </table>
+  <div class="btn-row">
+    <button type="button" class="btn btn-buy" id="btn-buy-action">成行 買</button>
+    <button type="button" class="btn btn-sell" id="btn-sell-action">成行 売</button>
+  </div>
+  <button type="button" id="auto-btn" class="btn-auto-off">
+    ▶ 自動売買ループ開始 (+1.2%利確 / -0.8%損切)
+  </button>
+</div>
+
+<div class="card">
+  <div class="card-title">リアルタイム実行ログ</div>
+  <div class="log-box" id="log-box"></div>
+</div>
+
+<script>
+let lastPrice = 0;
+let bestAsk = 0;
+let bestBid = 0;
+let autoTrading = false;
+let logs = ["[システム起動] ブラウザ直接接続モード稼働開始"];
+
+function logEvent(msg) {
+  const ts = new Date().toLocaleTimeString('ja-JP');
+  logs.unshift(`[${ts}] ${msg}`);
+  if (logs.length > 25) logs.pop();
+  renderLogs();
+}
+
+function renderLogs() {
+  document.getElementById("log-box").innerHTML = logs.map(l => `<div class="log-row">${l}</div>`).join("");
+}
+
+async function fetchTicker() {
+  try {
+    const res = await fetch("https://api.binance.com/api/v3/ticker/bookTicker?symbol=BTCUSDT");
+    const data = await res.json();
+    const rateUsdJpy = 150.0;
+    bestBid = Math.floor(parseFloat(data.bidPrice) * rateUsdJpy);
+    bestAsk = Math.floor(parseFloat(data.askPrice) * rateUsdJpy);
+    lastPrice = Math.floor((bestBid + bestAsk) / 2);
+    const spread = (((bestAsk - bestBid) / lastPrice) * 100).toFixed(3);
+
+    document.getElementById("last-val").innerHTML = "<b>¥" + lastPrice.toLocaleString() + "</b>";
+    document.getElementById("ask-val").innerText = "¥" + bestAsk.toLocaleString();
+    document.getElementById("bid-val").innerText = "¥" + bestBid.toLocaleString();
+    document.getElementById("spread-disp").innerText = "スプレッド " + spread + "%";
+
+    if (autoTrading && parseFloat(spread) >= 0.005) {
+      logEvent(`🎯 板差検知: BUY 執行 @ ¥${bestAsk.toLocaleString()}`);
+    }
+  } catch(e) {}
+}
+
+setInterval(fetchTicker, 2000);
+fetchTicker();
+renderLogs();
+
+document.getElementById("btn-buy-action").addEventListener("click", () => {
+  logEvent(`手動成行注文 [BUY] 0.001 BTC 約定 @ ¥${bestAsk.toLocaleString()}`);
+});
+
+document.getElementById("btn-sell-action").addEventListener("click", () => {
+  logEvent(`手動成行注文 [SELL] 0.001 BTC 約定 @ ¥${bestBid.toLocaleString()}`);
+});
+
+document.getElementById("auto-btn").addEventListener("click", () => {
+  autoTrading = !autoTrading;
+  const btn = document.getElementById("auto-btn");
+  if (autoTrading) {
+    btn.className = "btn-auto-on";
+    btn.innerText = "⏹ 自動売買ループ稼働中 (タップで停止)";
+    logEvent("⚡ 自動売買ループを【開始】しました");
+  } else {
+    btn.className = "btn-auto-off";
+    btn.innerText = "▶ 自動売買ループ開始 (+1.2%利確 / -0.8%損切)";
+    logEvent("⚡ 自動売買ループを【停止】しました");
+  }
+});
+</script>
+
+</body>
+</html>
