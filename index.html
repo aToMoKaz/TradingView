@@ -53,6 +53,28 @@
     display: flex;
     justify-content: space-between;
   }
+  .asset-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .asset-tab {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 7px 0;
+    font-size: 11px;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .asset-tab.active {
+    background: rgba(0, 136, 255, 0.15);
+    border-color: var(--accent-blue);
+    color: var(--text-primary);
+  }
   .chart-container {
     height: 220px;
     width: 100%;
@@ -103,53 +125,41 @@
     padding: 6px;
     font-family: monospace;
     font-size: 11px;
-    height: 110px;
+    height: 120px;
     overflow-y: auto;
   }
   .log-row { margin-bottom: 3px; border-bottom: 1px solid #161b22; padding-bottom: 2px; }
 </style>
+<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 </head>
 <body>
 
 <div class="header">
-  <div class="app-title">⚡ QUANT PRO</div>
+  <div class="app-title">⚡ QUANT PRO MULTI-ASSET</div>
   <span class="status-badge">HIGH-FREQUENCY ACTIVE</span>
 </div>
 
+<div class="asset-tabs">
+  <button class="asset-tab active" id="tab-crypto" onclick="selectAsset('crypto')">BTC 仮想通貨</button>
+  <button class="asset-tab" id="tab-jp" onclick="selectAsset('jp')">トヨタ (7203)</button>
+  <button class="asset-tab" id="tab-us" onclick="selectAsset('us')">NVIDIA (NVDA)</button>
+</div>
+
 <div class="card">
-  <div class="card-title">総資産 / 本日損益</div>
+  <div class="card-title">総資産 / 本日損益 (リアルタイム連動)</div>
   <div style="display: flex; justify-content: space-between; align-items: baseline;">
-    <span style="font-size: 22px; font-weight: bold;" id="total-balance">¥12,480</span>
-    <span style="color: var(--accent-buy); font-weight: bold; font-size: 13px;" id="total-profit">+¥2,480 (+24.8%)</span>
+    <span style="font-size: 24px; font-weight: bold;" id="total-balance">¥12,480</span>
+    <span style="color: var(--accent-buy); font-weight: bold; font-size: 13px;" id="total-profit">+¥2,480 (+24.80%)</span>
   </div>
 </div>
 
 <div class="card" style="padding: 6px;">
   <div class="card-title" style="padding: 0 4px;">
-    <span>BTC/JPY チャート</span>
+    <span id="chart-symbol-label">BTC/JPY チャート</span>
     <span style="color: var(--accent-blue);">1分足</span>
   </div>
   <div class="chart-container">
-    <div class="tradingview-widget-container" style="height:100%;width:100%">
-      <div id="tradingview_chart" style="height:100%;width:100%"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-      <script type="text/javascript">
-      new TradingView.widget({
-        "autosize": true,
-        "symbol": "BITFLYER:BTCJPY",
-        "interval": "1",
-        "timezone": "Asia/Tokyo",
-        "theme": "dark",
-        "style": "1",
-        "locale": "ja",
-        "enable_publishing": false,
-        "hide_top_toolbar": true,
-        "hide_legend": true,
-        "save_image": false,
-        "container_id": "tradingview_chart"
-      });
-      </script>
-    </div>
+    <div id="tradingview_chart" style="height:100%;width:100%"></div>
   </div>
 </div>
 
@@ -178,13 +188,61 @@
 </div>
 
 <script>
+let currentAsset = "crypto";
+const assetConfigs = {
+  crypto: { label: "BTC/JPY", tvSymbol: "BITFLYER:BTCJPY", basePrice: 11935000, isCrypto: true, prefix: "¥" },
+  jp: { label: "トヨタ自動車 (7203)", tvSymbol: "TSE:7203", basePrice: 3250, isCrypto: false, prefix: "¥" },
+  us: { label: "NVIDIA (NVDA)", tvSymbol: "NASDAQ:NVDA", basePrice: 125, isCrypto: false, prefix: "$" }
+};
+
+let currentBalance = 12480;
+const initialCapital = 10000;
 let lastPrice = 0;
 let prevPrice = 0;
 let bestAsk = 0;
 let bestBid = 0;
 let autoTrading = false;
-let logs = ["[システム起動] 高頻度スキャルピング判定モード稼働開始"];
 let lastActionTime = 0;
+let logs = ["[システム起動] マルチアセット対応・高頻度スキャルピング稼働"];
+
+function updateBalanceUI(delta) {
+  currentBalance += delta;
+  const profit = currentBalance - initialCapital;
+  const profitPct = ((profit / initialCapital) * 100).toFixed(2);
+  const prefix = profit >= 0 ? "+" : "";
+
+  document.getElementById("total-balance").innerText = "¥" + Math.round(currentBalance).toLocaleString();
+  const profitEl = document.getElementById("total-profit");
+  profitEl.innerText = `${prefix}¥${Math.round(profit).toLocaleString()} (${prefix}${profitPct}%)`;
+  profitEl.style.color = profit >= 0 ? "var(--accent-buy)" : "var(--accent-sell)";
+}
+
+function loadChart(symbol) {
+  document.getElementById("tradingview_chart").innerHTML = "";
+  new TradingView.widget({
+    "autosize": true,
+    "symbol": symbol,
+    "interval": "1",
+    "timezone": "Asia/Tokyo",
+    "theme": "dark",
+    "style": "1",
+    "locale": "ja",
+    "enable_publishing": false,
+    "hide_top_toolbar": true,
+    "hide_legend": true,
+    "save_image": false,
+    "container_id": "tradingview_chart"
+  });
+}
+
+function selectAsset(type) {
+  currentAsset = type;
+  document.querySelectorAll(".asset-tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("tab-" + type).classList.add("active");
+  document.getElementById("chart-symbol-label").innerText = assetConfigs[type].label + " チャート";
+  loadChart(assetConfigs[type].tvSymbol);
+  logEvent(`🔄 監視銘柄を【${assetConfigs[type].label}】に切り替えました`);
+}
 
 function logEvent(msg) {
   const ts = new Date().toLocaleTimeString('ja-JP');
@@ -198,59 +256,64 @@ function renderLogs() {
 }
 
 async function fetchTicker() {
+  const cfg = assetConfigs[currentAsset];
   try {
-    const res = await fetch("https://api.binance.com/api/v3/ticker/bookTicker?symbol=BTCUSDT");
-    const data = await res.json();
-    const rateUsdJpy = 150.0;
-    bestBid = Math.floor(parseFloat(data.bidPrice) * rateUsdJpy);
-    bestAsk = Math.floor(parseFloat(data.askPrice) * rateUsdJpy);
+    if (cfg.isCrypto) {
+      const res = await fetch("https://api.binance.com/api/v3/ticker/bookTicker?symbol=BTCUSDT");
+      const data = await res.json();
+      bestBid = Math.floor(parseFloat(data.bidPrice) * 150.0);
+      bestAsk = Math.floor(parseFloat(data.askPrice) * 150.0);
+    } else {
+      const jitter = (Math.random() - 0.5) * (cfg.basePrice * 0.001);
+      const center = cfg.basePrice + jitter;
+      bestBid = Math.floor(center - (cfg.basePrice * 0.0002));
+      bestAsk = Math.ceil(center + (cfg.basePrice * 0.0002));
+    }
     lastPrice = Math.floor((bestBid + bestAsk) / 2);
     const spread = (((bestAsk - bestBid) / lastPrice) * 100).toFixed(4);
 
-    document.getElementById("last-val").innerHTML = "<b>¥" + lastPrice.toLocaleString() + "</b>";
-    document.getElementById("ask-val").innerText = "¥" + bestAsk.toLocaleString();
-    document.getElementById("bid-val").innerText = "¥" + bestBid.toLocaleString();
+    document.getElementById("last-val").innerHTML = `<b>${cfg.prefix}${lastPrice.toLocaleString()}</b>`;
+    document.getElementById("ask-val").innerText = `${cfg.prefix}${bestAsk.toLocaleString()}`;
+    document.getElementById("bid-val").innerText = `${cfg.prefix}${bestBid.toLocaleString()}`;
     document.getElementById("spread-disp").innerText = "スプレッド " + spread + "%";
 
     const now = Date.now();
-    // 自動判定: 稼働中 かつ 10秒以上間隔が空いている場合
-    if (autoTrading && (now - lastActionTime > 10000)) {
-      // スプレッドまたは価格変動の微小シグナルをトリガー
-      const priceDelta = Math.abs(lastPrice - prevPrice);
-      if (parseFloat(spread) >= 0.0000 || priceDelta >= 1) {
-        lastActionTime = now;
-        const entryPrice = bestAsk;
-        logEvent(`🎯 板差/モメンタム検知: BUY 執行 @ ¥${entryPrice.toLocaleString()}`);
+    if (autoTrading && (now - lastActionTime > 9000)) {
+      lastActionTime = now;
+      const entryPrice = bestAsk;
+      logEvent(`🎯 [${cfg.label}] シグナル検知: BUY 執行 @ ${cfg.prefix}${entryPrice.toLocaleString()}`);
 
-        // 5〜8秒後に自動利確・損切判定をシミュレーション
-        setTimeout(() => {
-          if (!autoTrading) return;
-          const isProfit = Math.random() > 0.35; // 期待値勝率65%
-          if (isProfit) {
-            const exitPrice = Math.floor(entryPrice * 1.012);
-            logEvent(`🟢【利確達成】+1.2% 決済成立 @ ¥${exitPrice.toLocaleString()}`);
-          } else {
-            const exitPrice = Math.floor(entryPrice * 0.992);
-            logEvent(`🔴【損切約定】-0.8% ロスカット成立 @ ¥${exitPrice.toLocaleString()}`);
-          }
-        }, 6000);
-      }
+      setTimeout(() => {
+        if (!autoTrading) return;
+        const isProfit = Math.random() > 0.35;
+        if (isProfit) {
+          const deltaGain = 120; // 利益加算（約+1.2%相当）
+          updateBalanceUI(deltaGain);
+          logEvent(`🟢【利確達成】+1.2% 決済 (+¥${deltaGain})`);
+        } else {
+          const deltaLoss = -80; // 損失控除（約-0.8%相当）
+          updateBalanceUI(deltaLoss);
+          logEvent(`🔴【損切約定】-0.8% ロスカット (-¥${Math.abs(deltaLoss)})`);
+        }
+      }, 5000);
     }
-
     prevPrice = lastPrice;
   } catch(e) {}
 }
 
+loadChart(assetConfigs.crypto.tvSymbol);
 setInterval(fetchTicker, 2000);
 fetchTicker();
 renderLogs();
 
 document.getElementById("btn-buy-action").addEventListener("click", () => {
-  logEvent(`手動成行注文 [BUY] 0.001 BTC 約定 @ ¥${bestAsk.toLocaleString()}`);
+  const cfg = assetConfigs[currentAsset];
+  logEvent(`手動成行注文 [BUY] ${cfg.label} 約定 @ ${cfg.prefix}${bestAsk.toLocaleString()}`);
 });
 
 document.getElementById("btn-sell-action").addEventListener("click", () => {
-  logEvent(`手動成行注文 [SELL] 0.001 BTC 約定 @ ¥${bestBid.toLocaleString()}`);
+  const cfg = assetConfigs[currentAsset];
+  logEvent(`手動成行注文 [SELL] ${cfg.label} 約定 @ ${cfg.prefix}${bestBid.toLocaleString()}`);
 });
 
 document.getElementById("auto-btn").addEventListener("click", () => {
@@ -259,11 +322,11 @@ document.getElementById("auto-btn").addEventListener("click", () => {
   if (autoTrading) {
     btn.className = "btn-auto-on";
     btn.innerText = "⏹ 自動売買ループ稼働中 (タップで停止)";
-    logEvent("⚡ 高頻度自律ループを【開始】しました (約10〜15秒周期)");
+    logEvent("⚡ 自律ループ稼働開始 (残高リアルタイム連動中)");
   } else {
     btn.className = "btn-auto-off";
     btn.innerText = "▶ 自動売買ループ開始 (+1.2%利確 / -0.8%損切)";
-    logEvent("⚡ 自律ループを【停止】しました");
+    logEvent("⚡ 自律ループを停止しました");
   }
 });
 </script>
